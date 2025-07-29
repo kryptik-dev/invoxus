@@ -1,13 +1,52 @@
-const puppeteer = require('puppeteer');
+// Try to import puppeteer, fallback to puppeteer-core
+let puppeteer;
+try {
+  puppeteer = require('puppeteer');
+} catch (e) {
+  puppeteer = require('puppeteer-core');
+}
+
 const fs = require('fs').promises;
+const os = require('os');
 
 const SESAME_URL = 'https://app.sesame.com';
 const TOKEN_FILE = 'token.txt';
 const MAYA_SELECTOR = 'div[data-testid="maya-button"]';
 const LOOP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
+// Determine Chrome executable path based on platform
+function getChromePath() {
+  const platform = os.platform();
+  
+  if (platform === 'win32') {
+    // Windows paths
+    const possiblePaths = [
+      'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+      'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+      process.env.PUPPETEER_EXECUTABLE_PATH
+    ].filter(Boolean);
+    
+    for (const path of possiblePaths) {
+      try {
+        if (require('fs').existsSync(path)) {
+          return path;
+        }
+      } catch (e) {
+        // Continue to next path
+      }
+    }
+    
+    // If no Chrome found, return null to use default Puppeteer behavior
+    return null;
+  } else {
+    // Linux/Docker paths
+    return process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome-stable';
+  }
+}
+
 async function extractToken() {
-  const browser = await puppeteer.launch({
+  const chromePath = getChromePath();
+  const launchOptions = {
     headless: true,
     args: [
       '--no-sandbox',
@@ -15,7 +54,14 @@ async function extractToken() {
       '--disable-dev-shm-usage',
       '--use-fake-ui-for-media-stream'
     ]
-  });
+  };
+
+  // Only add executablePath if Chrome is found
+  if (chromePath) {
+    launchOptions.executablePath = chromePath;
+  }
+
+  const browser = await puppeteer.launch(launchOptions);
 
   console.log('Chrome is open');
 
