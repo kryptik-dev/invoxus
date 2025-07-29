@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Invoxus Voice Call</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="image.png">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f1419, #1a1f2e, #2d3748);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .video-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -2;
+    }
+    
+    .video-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: -1;
+    }
+    
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .avatar-glow {
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+    }
+    
+    .control-button {
+      transition: all 0.2s ease;
+    }
+    
+    .control-button:hover {
+      transform: scale(1.05);
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .control-button:active {
+      transform: scale(0.95);
+    }
+    
+    .pulse-ring {
+      animation: pulse-ring 2s infinite;
+    }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(1.2); opacity: 0; }
+    }
+    
+    .floating-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .ringing-animation {
+      animation: ring 1s ease-in-out infinite;
+    }
+    
+    @keyframes ring {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    .character-card {
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .character-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .maya-theme {
+      background: linear-gradient(135deg, #1e3a8a, #3730a3);
+    }
+    
+    .miles-theme {
+      background: linear-gradient(135deg, #7c2d12, #991b1b);
+    }
+    
+    .call-screen {
+      display: none !important;
+    }
+    
+    .dashboard {
+      display: flex !important;
+    }
+    
+    .invoxus-title {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    body {
+      overflow-y: auto !important;
+      min-height: 100vh;
+    }
+    
+    .dashboard {
+      min-height: 100vh !important;
+      height: auto !important;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900 text-white overflow-hidden">
+  <!-- Donprod.uk-inspired Loading Screen -->
+  <div id="loading-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-black overflow-hidden">
+    <div class="relative flex flex-col items-center">
+      <!-- Centered wrapper for perfect alignment -->
+      <div class="relative flex items-center justify-center" style="width: 160px; height: 160px;">
+        <!-- Glowing animated border -->
+        <div class="glow-border absolute inset-0"></div>
+        <!-- Animated sweep light -->
+        <div class="sweep absolute inset-0"></div>
+        <!-- Centered logo/image -->
+        <img src="image.png" alt="Loading" class="w-32 h-32 rounded-full z-10 animate-logo-pop">
+      </div>
+    </div>
+  </div>
+  <style>
+    .glow-border {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      border: 4px solid #3b82f6;
+      box-shadow: 0 0 60px 20px #3b82f6, 0 0 120px 40px #1e40af44;
+      animation: border-glow 2.5s infinite alternate;
+      position: absolute;
+      z-index: 1;
+    }
+    @keyframes border-glow {
+      0% { box-shadow: 0 0 60px 20px #3b82f6, 0 0 120px 40px #1e40af44; }
+      100% { box-shadow: 0 0 100px 40px #60a5fa, 0 0 200px 80px #1e40af33; }
+    }
+    .animate-logo-pop {
+      animation: logo-pop 1.2s cubic-bezier(.39,.575,.565,1.000) both;
+    }
+    @keyframes logo-pop {
+      0% { opacity: 0; transform: scale(0.7);}
+      60% { opacity: 1; transform: scale(1.1);}
+      100% { opacity: 1; transform: scale(1);}
+    }
+    .sweep {
+      position: absolute;
+      top: 0; left: 0; width: 160px; height: 160px;
+      border-radius: 50%;
+      background: linear-gradient(120deg, transparent 60%, #fff3 100%);
+      filter: blur(8px);
+      animation: sweep-move 2.5s infinite linear;
+      z-index: 2;
+      pointer-events: none;
+    }
+    @keyframes sweep-move {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+  </style>
+  
+  <!-- Background Video -->
+  <video class="video-background" autoplay muted loop playsinline>
+    <source src="background/back.mp4" type="video/mp4">
+  </video>
+  <div class="video-overlay"></div>
+  
+  <!-- Dashboard Screen -->
+  <div id="dashboard" class="dashboard h-screen flex flex-col">
+    <!-- Header -->
+          <div class="flex items-center justify-between p-6 glass-effect">
+        <div class="flex items-center space-x-3">
+          <img src="image.png" alt="Invoxus" class="w-24 h-24 object-contain -mt-8 -mb-8">
+        </div>
+        <div class="text-sm text-gray-400">Choose your assistant</div>
+      </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col items-center justify-center p-6 space-y-8">
+      
+      <!-- Welcome Section -->
+      <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center space-x-6 max-w-4xl w-full">
+          <img src="image.png" alt="Invoxus" class="w-24 h-24 object-contain">
+          <div class="text-left">
+            <p class="text-lg text-gray-300 max-w-2xl">
+              Advanced voice AI platform powered by cutting-edge neural networks. 
+              Select your AI agent and initiate real-time conversation.
+            </p>
+            <div class="mt-3">
+              <span class="inline-block bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                ALPHA
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full mb-8">
+        
+        <!-- Maya Card -->
+        <div id="maya-card" class="character-card rounded-2xl p-8 text-center cursor-pointer hover:border-2 hover:border-pink-400 hover:shadow-pink-400/20 transition-all duration-300" onclick="showMayaCall()">
+          <div class="w-32 h-32 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 mx-auto mb-6 flex items-center justify-center">
+            <span class="text-white font-bold text-4xl">M</span>
+          </div>
+          <h2 class="text-2xl font-bold mb-2 text-gray-100">Maya</h2>
+          <p class="text-gray-300 mb-6">Your creative and artistic AI assistant</p>
+          <div class="flex items-center justify-center space-x-4 text-sm text-gray-400 mb-4">
+            <div class="flex items-center space-x-1">
+              <i class="fas fa-palette text-slate-400"></i>
+              <span>Creative</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <i class="fas fa-music text-slate-400"></i>
+              <span>Artistic</span>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500">
+            Neural network optimized for creative ideation and artistic expression
+          </div>
+        </div>
+
+        <!-- Miles Card -->
+        <div id="miles-card" class="character-card rounded-2xl p-8 text-center cursor-pointer hover:border-2 hover:border-blue-400 hover:shadow-blue-400/20 transition-all duration-300" onclick="showMilesCall()">
+          <div class="w-32 h-32 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 mx-auto mb-6 flex items-center justify-center">
+            <span class="text-white font-bold text-4xl">Mi</span>
+          </div>
+          <h2 class="text-2xl font-bold mb-2 text-gray-100">Miles</h2>
+          <p class="text-gray-300 mb-6">Your analytical and logical AI assistant</p>
+          <div class="flex items-center justify-center space-x-4 text-sm text-gray-400 mb-4">
+            <div class="flex items-center space-x-1">
+              <i class="fas fa-brain text-slate-400"></i>
+              <span>Analytical</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <i class="fas fa-chart-line text-slate-400"></i>
+              <span>Logical</span>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500">
+            Advanced reasoning engine for analytical processing and strategic computation
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Features Section -->
+      <div class="max-w-4xl w-full">
+        <h2 class="text-2xl font-bold text-center mb-6 text-gray-100">Platform Specifications</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="glass-effect rounded-xl p-6 text-center">
+            <i class="fas fa-microphone text-3xl text-blue-400 mb-4"></i>
+            <h3 class="text-lg font-semibold mb-2 text-gray-100">Real-time Processing</h3>
+            <p class="text-sm text-gray-400">Advanced speech recognition with sub-100ms latency</p>
+          </div>
+          <div class="glass-effect rounded-xl p-6 text-center">
+            <i class="fas fa-brain text-3xl text-pink-400 mb-4"></i>
+            <h3 class="text-lg font-semibold mb-2 text-gray-100">Neural Architecture</h3>
+            <p class="text-sm text-gray-400">Multi-layered transformer models for contextual understanding</p>
+          </div>
+          <div class="glass-effect rounded-xl p-6 text-center">
+            <i class="fas fa-network-wired text-3xl text-green-400 mb-4"></i>
+            <h3 class="text-lg font-semibold mb-2 text-gray-100">WebRTC Protocol</h3>
+            <p class="text-sm text-gray-400">Secure peer-to-peer communication with end-to-end encryption</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="p-4 text-center">
+      <p class="text-xs text-gray-500">
+        A project rev engineered fork of <span class="text-gray-400">Sesame</span>
+      </p>
+      <p class="text-xs text-gray-500 mt-1">
+        Made by <span class="text-gray-400">кяуρтιк</span>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    function showDashboard() {
+      // This function is now just for going back to dashboard from call screen
+      // The dashboard is always visible in index.html
+    }
+
+    function showMayaCall() {
+      console.log('showMayaCall clicked!'); // Debug log
+      // Redirect to Maya call screen
+      window.location.href = 'maya-call.html';
+    }
+
+    function showMilesCall() {
+      console.log('showMilesCall clicked!'); // Debug log
+      // Redirect to Miles call screen
+      window.location.href = 'miles-call.html';
+    }
+
+    // Add click event listeners when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      const mayaCard = document.getElementById('maya-card');
+      const milesCard = document.getElementById('miles-card');
+      
+      if (mayaCard) {
+        // The onclick attribute is now handled directly in HTML
+      }
+      
+      if (milesCard) {
+        // The onclick attribute is now handled directly in HTML
+      }
+    });
+
+    // Fade out loading screen after 1.5s
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        const loading = document.getElementById('loading-screen');
+        if (loading) {
+          loading.style.transition = 'opacity 0.7s';
+          loading.style.opacity = 0;
+          setTimeout(() => loading.style.display = 'none', 700);
+        }
+      }, 3000); // 3 seconds
+    });
+  </script>
+</body>
+</html> 

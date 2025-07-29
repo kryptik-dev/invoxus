@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Invoxus - Miles Call</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+        }
+        
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: -1;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .avatar-glow {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+        }
+        
+        .control-button {
+            transition: all 0.3s ease;
+        }
+        
+        .control-button:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        .pulse-ring {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
+        
+        .floating-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .ringing-animation {
+            animation: ring 1s ease-in-out infinite;
+        }
+        
+        @keyframes ring {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .flexible-bottom-padding {
+            padding-bottom: clamp(1rem, 5vh, 3rem);
+        }
+        
+        @media (max-height: 600px) {
+            .flexible-bottom-padding {
+                padding-bottom: 0.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .compact-layout {
+                margin: 0.5rem;
+            }
+            .mobile-compact {
+                padding: 0.75rem;
+            }
+        }
+        
+        .invoxus-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+    
+    <!-- Background Video -->
+    <video class="video-background" autoplay muted loop playsinline>
+        <source src="background/back.mp4" type="video/mp4">
+    </video>
+    <div class="video-overlay"></div>
+    
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between p-4 glass-effect">
+        <div class="flex items-center space-x-3">
+            <button onclick="goBack()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                <i class="fas fa-arrow-left text-white text-sm"></i>
+            </button>
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">Mi</span>
+                </div>
+                <div class="bg-white/10 rounded-lg px-3 py-1">
+                    <span class="text-white text-sm font-medium">Miles</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <div id="call-timer" class="text-white font-bold text-lg">00:00</div>
+            <button id="volume-btn" onclick="toggleVolume()" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
+                <i id="volume-icon" class="fas fa-volume-up text-white text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex items-center justify-center relative">
+        
+        <!-- Main Avatar -->
+        <div class="relative">
+            <!-- Pulse rings -->
+            <div class="absolute inset-0 rounded-full bg-slate-500/20 pulse-ring"></div>
+            <div class="absolute inset-0 rounded-full bg-slate-500/10 pulse-ring" style="animation-delay: 0.5s;"></div>
+            
+            <!-- Main avatar circle -->
+            <div id="call-circle" class="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full flex items-center justify-center glass-effect avatar-glow floating-animation">
+                <div class="w-40 h-40 sm:w-56 sm:h-56 md:w-72 md:h-72 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                    <i id="mic-icon" class="fas fa-microphone text-4xl sm:text-5xl md:text-6xl text-white"></i>
+                </div>
+            </div>
+            
+            <!-- Status indicator -->
+            <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                <div class="bg-green-600 rounded-full px-3 py-1 flex items-center space-x-2">
+                    <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    <span class="text-white text-xs font-medium" id="mic-status">Mic On</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Left Thumbnail -->
+    <div class="absolute bottom-32 left-4">
+        <div class="w-16 h-20 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 glass-effect flex items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
+                <span class="text-white font-bold text-lg">U</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Control Bar -->
+    <div class="w-full p-4 flexible-bottom-padding">
+        <div class="glass-effect rounded-2xl p-4 flex items-center justify-center space-x-6">
+            
+            <!-- Mute Button Removed -->
+
+            <!-- Character Switcher -->
+            <button onclick="goBack()" class="control-button w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                <i class="fas fa-user-friends text-white text-lg"></i>
+            </button>
+
+            <!-- End Call Button -->
+            <button id="end-btn" onclick="endCall()" class="control-button w-12 h-12 rounded-full bg-red-600 flex items-center justify-center">
+                <i class="fas fa-phone-slash text-white text-lg"></i>
+            </button>
+
+            <!-- Settings Button Removed -->
+
+        </div>
+    </div>
+
+    <script>
+        // Set Miles as the character IMMEDIATELY
+        window.CHARACTER = "Miles";
+        
+        console.log('Miles call screen loaded, character set to:', window.CHARACTER);
+        console.log('Character set at script load time:', window.CHARACTER);
+        
+        // Global variables for button states
+        let isMuted = false;
+        let isVolumeOn = true;
+        
+        function showRingingState() {
+            const micStatusEl = document.getElementById('mic-status');
+            const timerEl = document.getElementById('call-timer');
+            const callCircle = document.getElementById('call-circle');
+            
+            console.log('Miles showRingingState called');
+            console.log('Character during ringing state:', window.CHARACTER);
+            
+            if (micStatusEl) {
+                micStatusEl.textContent = 'Ringing...';
+                micStatusEl.className = 'text-xs font-medium text-yellow-400';
+            }
+            
+            if (timerEl) {
+                timerEl.textContent = 'Connecting...';
+            }
+            
+            if (callCircle) {
+                callCircle.classList.add('ringing-animation');
+            }
+        }
+        
+        function showConnectedState() {
+            const micStatusEl = document.getElementById('mic-status');
+            const callCircle = document.getElementById('call-circle');
+            
+            if (micStatusEl) {
+                micStatusEl.textContent = 'Mic On';
+                micStatusEl.className = 'text-xs font-medium text-green-400';
+            }
+            
+            if (callCircle) {
+                callCircle.classList.remove('ringing-animation');
+            }
+        }
+        
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+        
+        function toggleVolume() {
+            isVolumeOn = !isVolumeOn;
+            const volumeBtn = document.getElementById('volume-btn');
+            const volumeIcon = document.getElementById('volume-icon');
+            
+            if (isVolumeOn) {
+                volumeIcon.className = 'fas fa-volume-up text-white text-sm';
+                console.log('Volume on');
+            } else {
+                volumeIcon.className = 'fas fa-volume-mute text-white text-sm';
+                console.log('Volume muted');
+            }
+        }
+        
+        function endCall() {
+            console.log('Ending call...');
+            stopTimer();
+            closeWebSocket();
+            goBack();
+        }
+        
+        function showSettings() {
+            console.log('Settings clicked - placeholder for future settings panel');
+            // Placeholder for future settings functionality
+        }
+        
+        // Make functions globally available
+        window.showConnectedState = showConnectedState;
+        
+        // Wait for DOM to be loaded before initializing
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Miles DOM loaded');
+            console.log('Character during DOM load:', window.CHARACTER);
+            
+            // Double-check character is set
+            window.CHARACTER = "Miles";
+            console.log('Character re-confirmed:', window.CHARACTER);
+            
+            // Show ringing state immediately
+            showRingingState();
+            
+            // Start the call after a short delay to ensure everything is loaded
+            setTimeout(() => {
+                console.log('About to call loadToken, character is:', window.CHARACTER);
+                if (typeof loadToken === 'function') {
+                    loadToken();
+                }
+            }, 100);
+        });
+    </script>
+    
+    <script src="main.js"></script>
+</body>
+</html> 

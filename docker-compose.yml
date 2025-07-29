@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  sesame-app:
+    build: .
+    ports:
+      - "10000:10000"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      # Mount the current directory to allow for file operations
+      - ./token.txt:/usr/src/app/token.txt
+    restart: unless-stopped
