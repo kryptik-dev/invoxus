@@ -17,8 +17,10 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Configure npm to avoid warnings and use install instead of ci
+RUN npm config set fund false && \
+    npm config set audit false && \
+    npm install --production --no-optional
 
 # Copy app source
 COPY . .
