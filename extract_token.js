@@ -12,7 +12,6 @@ const os = require('os');
 const SESAME_URL = 'https://app.sesame.com';
 const TOKEN_FILE = 'token.txt';
 const MAYA_SELECTOR = 'div[data-testid="maya-button"]';
-const LOOP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Determine Chrome executable path based on platform
 function getChromePath() {
@@ -45,13 +44,21 @@ function getChromePath() {
 }
 
 async function extractToken() {
+  console.log('Starting token extraction...');
   const chromePath = getChromePath();
+  console.log('Chrome path:', chromePath);
+  
   const launchOptions = {
     headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-extensions',
       '--use-fake-ui-for-media-stream'
     ]
   };
@@ -61,9 +68,14 @@ async function extractToken() {
     launchOptions.executablePath = chromePath;
   }
 
-  const browser = await puppeteer.launch(launchOptions);
-
-  console.log('Chrome is open');
+  let browser;
+  try {
+    browser = await puppeteer.launch(launchOptions);
+    console.log('Chrome launched successfully');
+  } catch (error) {
+    console.error('Failed to launch Chrome:', error);
+    return;
+  }
 
   const page = await browser.newPage();
 
@@ -78,20 +90,25 @@ async function extractToken() {
   await client.send('Network.enable');
   client.on('Network.webSocketCreated', ({ url }) => {
     if (url.includes('id_token=')) {
-      console.log('WebSocket URL:', url); // Debug log
+      console.log('WebSocket URL found:', url.substring(0, 100) + '...');
       const match = url.match(/id_token=([A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+)/);
       if (match && match[1]) {
         tokenFound = match[1];
+        console.log('Token found:', tokenFound.substring(0, 20) + '...');
       }
     }
   });
 
   try {
-    await page.goto(SESAME_URL, { waitUntil: 'networkidle2' });
+    console.log('Navigating to Sesame...');
+    await page.goto(SESAME_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+    console.log('Page loaded successfully');
 
     // Wait for Maya button and click it
+    console.log('Waiting for Maya button...');
     await page.waitForSelector(MAYA_SELECTOR, { timeout: 15000 });
     await page.click(MAYA_SELECTOR);
+    console.log('Maya button clicked');
 
     // Wait for token to be found (timeout after 30s)
     const start = Date.now();
@@ -101,20 +118,26 @@ async function extractToken() {
 
     if (tokenFound) {
       await fs.writeFile(TOKEN_FILE, tokenFound, 'utf8');
-      console.log('id_token extracted and saved.');
+      console.log('id_token extracted and saved to', TOKEN_FILE);
     } else {
-      console.log('id_token not found.');
+      console.log('id_token not found within timeout period.');
     }
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Error during token extraction:', err);
   } finally {
-    await browser.close();
+    try {
+      await browser.close();
+      console.log('Browser closed');
+    } catch (closeError) {
+      console.error('Error closing browser:', closeError);
+    }
   }
+  
+  console.log('Token extraction completed');
 }
 
-(async function mainLoop() {
-  while (true) {
-    await extractToken();
-    await new Promise(res => setTimeout(res, LOOP_INTERVAL_MS));
-  }
-})();
+// Run the extraction
+extractToken().catch(error => {
+  console.error('Fatal error in token extraction:', error);
+  process.exit(1);
+});

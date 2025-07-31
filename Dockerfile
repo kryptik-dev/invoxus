@@ -17,13 +17,10 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 
-# Replace puppeteer with puppeteer-core for Docker
-RUN sed -i 's/"puppeteer": "^22.8.2"/"puppeteer-core": "^22.8.2"/' package.json
-
-# Configure npm to avoid warnings and use install instead of ci
+# Install dependencies first
 RUN npm config set fund false && \
     npm config set audit false && \
-    npm install --production --no-optional
+    npm install
 
 # Copy app source
 COPY . .
