@@ -84,13 +84,18 @@ async function extractToken() {
   await context.overridePermissions(SESAME_URL, ['microphone']);
 
   let tokenFound = null;
+  let websocketCount = 0;
 
   // Attach CDP session and listen for WebSocket creation
   const client = await page.target().createCDPSession();
   await client.send('Network.enable');
+  
   client.on('Network.webSocketCreated', ({ url }) => {
+    websocketCount++;
+    console.log(`WebSocket #${websocketCount} created:`, url.substring(0, 100) + '...');
+    
     if (url.includes('id_token=')) {
-      console.log('WebSocket URL found:', url.substring(0, 100) + '...');
+      console.log('WebSocket URL with token found:', url.substring(0, 100) + '...');
       const match = url.match(/id_token=([A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+)/);
       if (match && match[1]) {
         tokenFound = match[1];
@@ -101,26 +106,30 @@ async function extractToken() {
 
   try {
     console.log('Navigating to Sesame...');
-    await page.goto(SESAME_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+    await page.goto(SESAME_URL, { waitUntil: 'networkidle2', timeout: 60000 }); // Increased timeout to 60s
     console.log('Page loaded successfully');
 
     // Wait for Maya button and click it
     console.log('Waiting for Maya button...');
-    await page.waitForSelector(MAYA_SELECTOR, { timeout: 15000 });
+    await page.waitForSelector(MAYA_SELECTOR, { timeout: 30000 }); // Increased timeout to 30s
     await page.click(MAYA_SELECTOR);
     console.log('Maya button clicked');
 
-    // Wait for token to be found (timeout after 30s)
+    // Wait for token to be found (timeout after 60s instead of 30s)
     const start = Date.now();
-    while (!tokenFound && Date.now() - start < 30000) {
-      await new Promise(res => setTimeout(res, 500));
+    console.log('Waiting for token in WebSocket connections...');
+    while (!tokenFound && Date.now() - start < 60000) { // Increased to 60 seconds
+      await new Promise(res => setTimeout(res, 1000)); // Check every second instead of 500ms
+      if ((Date.now() - start) % 10000 === 0) { // Log progress every 10 seconds
+        console.log(`Still waiting for token... (${Math.floor((Date.now() - start) / 1000)}s elapsed, ${websocketCount} WebSockets seen)`);
+      }
     }
 
     if (tokenFound) {
       await fs.writeFile(TOKEN_FILE, tokenFound, 'utf8');
       console.log('id_token extracted and saved to', TOKEN_FILE);
     } else {
-      console.log('id_token not found within timeout period.');
+      console.log(`id_token not found within 60s timeout. Saw ${websocketCount} WebSocket connections.`);
     }
   } catch (err) {
     console.error('Error during token extraction:', err);
